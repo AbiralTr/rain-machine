@@ -5,12 +5,14 @@
 #include <algorithm>
 #include <iostream>
 
+#include "engine/components/Animation.hpp"
 #include "engine/components/Collider.hpp"
 #include "engine/components/PlayerControlled.hpp"
 #include "engine/components/Sprite.hpp"
 #include "engine/components/Transform.hpp"
 #include "engine/components/Velocity.hpp"
 #include "engine/core/Time.hpp"
+#include "engine/systems/AnimationSystem.hpp"
 #include "engine/systems/CameraSystem.hpp"
 #include "engine/systems/CollisionSystem.hpp"
 #include "engine/systems/InputSystem.hpp"
@@ -23,12 +25,23 @@ namespace engine {
 namespace {
 constexpr double kFixedDt = 1.0 / 60.0;
 constexpr double kMaxFrameTime = 0.25;
+
+TextureHandle loadFrame(TextureManager& textures, const std::string& dir, const std::string& name) {
+    return textures.load(dir + "/" + name + ".png");
+}
+
+DirectionFrames loadDirectionFrames(TextureManager& textures, const std::string& dir,
+                                     const std::string& direction) {
+    return DirectionFrames{loadFrame(textures, dir, direction + "_idle"),
+                            {loadFrame(textures, dir, direction + "_walk1"),
+                             loadFrame(textures, dir, direction + "_walk2")}};
+}
 }
 
 Application::Application() = default;
 Application::~Application() = default;
 
-bool Application::init(const std::string& mapPath, const std::string& playerSpritePath) {
+bool Application::init(const std::string& mapPath, const std::string& playerSpriteDir) {
     try {
         window_ = std::make_unique<Window>(WindowConfig{});
     } catch (const std::exception& e) {
@@ -60,23 +73,32 @@ bool Application::init(const std::string& mapPath, const std::string& playerSpri
         std::cerr << "Application::init: no player_spawn object found, defaulting to (0, 0)\n";
     }
 
-    TextureHandle playerTexture;
+    Animation playerAnimation;
     try {
-        playerTexture = textures_->load(playerSpritePath);
+        playerAnimation.frames[static_cast<std::size_t>(Direction::Down)] =
+            loadDirectionFrames(*textures_, playerSpriteDir, "down");
+        playerAnimation.frames[static_cast<std::size_t>(Direction::Up)] =
+            loadDirectionFrames(*textures_, playerSpriteDir, "up");
+        playerAnimation.frames[static_cast<std::size_t>(Direction::Left)] =
+            loadDirectionFrames(*textures_, playerSpriteDir, "left");
+        playerAnimation.frames[static_cast<std::size_t>(Direction::Right)] =
+            loadDirectionFrames(*textures_, playerSpriteDir, "right");
     } catch (const std::exception& e) {
         std::cerr << "Application::init: " << e.what() << "\n";
         return false;
     }
 
+    TextureHandle initialTexture = playerAnimation.frames[static_cast<std::size_t>(Direction::Down)].idle;
+
     int texW = 0;
     int texH = 0;
-    SDL_QueryTexture(textures_->get(playerTexture), nullptr, nullptr, &texW, &texH);
+    SDL_QueryTexture(textures_->get(initialTexture), nullptr, nullptr, &texW, &texH);
 
     playerEntity_ = registry_.createEntity();
     registry_.transforms().emplace(playerEntity_, Transform{spawnPosition});
     registry_.velocities().emplace(playerEntity_, Velocity{});
     registry_.sprites().emplace(
-        playerEntity_, Sprite{playerTexture, SDL_Rect{0, 0, texW, texH}, Vec2{texW / 2.0f, texH / 2.0f}});
+        playerEntity_, Sprite{initialTexture, SDL_Rect{0, 0, texW, texH}, Vec2{texW / 2.0f, texH / 2.0f}});
 
     float colliderWidth = texW * 0.5f;
     float colliderHeight = texH * 0.3f;
@@ -85,6 +107,7 @@ bool Application::init(const std::string& mapPath, const std::string& playerSpri
         Collider{Rect{(texW - colliderWidth) / 2.0f - texW / 2.0f, texH / 2.0f - colliderHeight,
                       colliderWidth, colliderHeight}});
     registry_.playerControlled().emplace(playerEntity_, PlayerControlled{});
+    registry_.animations().emplace(playerEntity_, std::move(playerAnimation));
 
     camera_.target = playerEntity_;
 
@@ -127,6 +150,7 @@ void Application::fixedUpdate(float dt) {
     MovementSystem::update(registry_, dt);
     CollisionSystem::update(registry_, map_, dt);
     CameraSystem::update(camera_, registry_, map_);
+    AnimationSystem::update(registry_, dt);
 }
 
 void Application::render() {

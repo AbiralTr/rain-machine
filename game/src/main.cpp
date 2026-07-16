@@ -5,7 +5,7 @@
 int main() {
     engine::Application app;
 
-    if (!app.init("assets/maps/test_map.tmj", "assets/sprites/player.png")) {
+    if (!app.init("assets/maps/test_map.tmj", "assets/sprites/player")) {
         std::cerr << "Failed to initialize application.\n";
         return 1;
     }

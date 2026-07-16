@@ -13,6 +13,7 @@ add_library(engine STATIC
     src/systems/CollisionSystem.cpp
     src/systems/CameraSystem.cpp
     src/systems/RenderSystem.cpp
+    src/systems/AnimationSystem.cpp
 )
 
 target_include_directories(engine PUBLIC include)

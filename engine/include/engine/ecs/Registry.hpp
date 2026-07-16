@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "engine/components/Animation.hpp"
 #include "engine/components/Collider.hpp"
 #include "engine/components/PlayerControlled.hpp"
 #include "engine/components/Sprite.hpp"
@@ -31,6 +32,7 @@ public:
         velocities_.remove(entity);
         colliders_.remove(entity);
         playerControlled_.remove(entity);
+        animations_.remove(entity);
 
         generations_[entity.index]++;
         freeIndices_.push_back(entity.index);
@@ -41,6 +43,7 @@ public:
     ComponentPool<Velocity>& velocities() { return velocities_; }
     ComponentPool<Collider>& colliders() { return colliders_; }
     ComponentPool<PlayerControlled>& playerControlled() { return playerControlled_; }
+    ComponentPool<Animation>& animations() { return animations_; }
 
 private:
     std::vector<std::uint32_t> generations_;
@@ -51,6 +54,7 @@ private:
     ComponentPool<Velocity> velocities_;
     ComponentPool<Collider> colliders_;
     ComponentPool<PlayerControlled> playerControlled_;
+    ComponentPool<Animation> animations_;
 };
 
 }

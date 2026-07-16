@@ -19,7 +19,7 @@ public:
     Application(const Application&) = delete;
     Application& operator=(const Application&) = delete;
 
-    bool init(const std::string& mapPath, const std::string& playerSpritePath);
+    bool init(const std::string& mapPath, const std::string& playerSpriteDir);
 
     void run();
 
